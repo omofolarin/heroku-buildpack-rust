@@ -140,7 +140,7 @@ if [ $RUST_SKIP_BUILD -ne 1 ]; then
   # To debug compiler and linking issues, add `--verbose`.
   echo "-----> Building application using Cargo"
   cd "$BUILD_DIR/$BUILD_PATH"
-  apt-get install libpq-dev
+  apt install libpq-dev
   rm -rf target/
   cargo build $RUST_CARGO_BUILD_FLAGS
   mkdir -p target/release
