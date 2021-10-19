@@ -5,13 +5,17 @@
 BUILD_DIR=${1:-}
 CACHE_DIR=${2:-}
 ENV_DIR=${3:-}
-BP_DIR=$(cd $(dirname ${0:-}); cd ..; pwd)
+BP_DIR=$(
+  cd $(dirname ${0:-})
+  cd ..
+  pwd
+)
 
 # Export DATABASE_URL at build time, mostly because Diesel is the best way to
 # do SQL in Rust right now, and Diesel will use it to generate code for the
 # database schema.
 if [ -e "$ENV_DIR/DATABASE_URL" ]; then
-  export DATABASE_URL="$(cat $ENV_DIR/DATABASE_URL)";
+  export DATABASE_URL="$(cat $ENV_DIR/DATABASE_URL)"
 fi
 
 # Set defaults for our configuration variables.  Stable Rust is sufficiently
@@ -37,12 +41,12 @@ RUST_CARGO_BUILD_FLAGS="--release"
 
 # Load our toolchain configuration, if any was specified.
 if [ -f "$BUILD_DIR/rust-toolchain" ]; then
-    VERSION="$(cat "$BUILD_DIR/rust-toolchain")"
+  VERSION="$(cat "$BUILD_DIR/rust-toolchain")"
 fi
 
 # Load our configuration variables, if any were specified.
 if [ -f "$BUILD_DIR/RustConfig" ]; then
-    . "$BUILD_DIR/RustConfig"
+  . "$BUILD_DIR/RustConfig"
 fi
 
 # Standard paranoia.
@@ -50,14 +54,14 @@ set -eu
 
 # Check our configuration options.
 if [ -z ${VERSION+x} ]; then
-  >&2 echo "failed: must set VERSION with rust-toolchain or RustConfig to indicate the Rust version."
+  echo >&2 "failed: must set VERSION with rust-toolchain or RustConfig to indicate the Rust version."
   exit 1
 fi
 
 # Notify users running old, unstable versions of Rust about how to deploy
 # successfully.
-if [ $RUST_SKIP_BUILD -ne 1  ] && ( [ ! -z ${CARGO_URL+x} ] || [ ! -f "$BUILD_DIR/$BUILD_PATH/Cargo.toml" ] ); then
-    >&2 cat <<EOF
+if [ $RUST_SKIP_BUILD -ne 1 ] && ([ ! -z ${CARGO_URL+x} ] || [ ! -f "$BUILD_DIR/$BUILD_PATH/Cargo.toml" ]); then
+  cat >&2 <<EOF
 To deploy a modern Rust app, make sure you have a Cargo.toml file, and that
 you do not define CARGO_URL or CARGO_VERSION in RustConfig.  If you're
 using an older version of Rust, and you need to re-deploy an existing
@@ -65,23 +69,23 @@ application, try setting your buildpack to:
 
   https://github.com/emk/heroku-buildpack-rust.git#old-rust
 EOF
-    exit 1
+  exit 1
 fi
 
 # Handle people who still aren't using Rustup.
 if [ ! -z ${URL+x} ]; then
-    >&2 cat <<EOF
+  cat >&2 <<EOF
 heroku-pack-rust has switched to using rustup.  You no longer need a
 URL field in RustConfig. Instead, you should just specify a
-rustup-compatible version (such as `1.11`, `stable` or `nighty`) in VERSION.
+rustup-compatible version (such as $(1.11), $(stable) or $(nighty)) in VERSION.
 EOF
-    exit 1
+  exit 1
 fi
 
 # Record our Rust build environment configuration in an export file, in
 # case another buildpack needs it to build Ruby gems that use Rust or
 # something like that.
-cat <<EOF > $BP_DIR/export
+cat <<EOF >$BP_DIR/export
 # Our rustup installation.
 export RUSTUP_HOME="$CACHE_DIR/multirust"
 
@@ -102,18 +106,18 @@ cd "$CACHE_DIR"
 
 # Make sure we have an appropriate Rust toolchain installed.
 if [ -d "$CARGO_HOME" ]; then
-    echo "-----> Checking for new releases of Rust $VERSION channel"
-    # It's possible that $VERSION has changed, or the `stable` channel has updated.
-    rustup self update
-    rustup update "$VERSION"
-    rustup default "$VERSION"
+  echo "-----> Checking for new releases of Rust $VERSION channel"
+  # It's possible that $VERSION has changed, or the `stable` channel has updated.
+  rustup self update
+  rustup update "$VERSION"
+  rustup default "$VERSION"
 else
-    echo "-----> Downloading rustup"
-    curl https://sh.rustup.rs -sSf > rustup.sh
-    chmod u+x rustup.sh
-    echo "-----> Using rustup to install Rust channel $VERSION"
-    ./rustup.sh -y --default-toolchain "$VERSION"
-    rm rustup.sh
+  echo "-----> Downloading rustup"
+  curl https://sh.rustup.rs -sSf >rustup.sh
+  chmod u+x rustup.sh
+  echo "-----> Using rustup to install Rust channel $VERSION"
+  ./rustup.sh -y --default-toolchain "$VERSION"
+  rm rustup.sh
 fi
 if [ ! -x "$CARGO_HOME/bin/rustc" ]; then
   echo "failed: Cannot find Rust binaries at $CARGO_HOME"
@@ -136,6 +140,7 @@ if [ $RUST_SKIP_BUILD -ne 1 ]; then
   # To debug compiler and linking issues, add `--verbose`.
   echo "-----> Building application using Cargo"
   cd "$BUILD_DIR/$BUILD_PATH"
+  sudo apt install libpq-dev
   rm -rf target/
   cargo build $RUST_CARGO_BUILD_FLAGS
   mkdir -p target/release
